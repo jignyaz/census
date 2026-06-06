@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Census Survey System - View and Export Saved Records">
+    <title>Saved Records — Census Survey System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="bg-decor"></div>
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="records-container">
+        <!-- Header -->
+        <div class="records-header">
+            <div class="records-header-left">
+                <a href="index.html" class="btn-back">&larr; Back to Form</a>
+            </div>
+            <div class="records-header-center">
+                <h1 id="records-title">Saved Responses</h1>
+                <p class="subtitle">Census Survey Records Database</p>
+            </div>
+            <div class="records-header-right">
+                <a href="chat.html" class="btn-back">Ask AI 🤖</a>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="records-stats-grid">
+            <div class="records-stat-card">
+                <div class="records-stat-icon">📊</div>
+                <div>
+                    <div class="records-stat-val" id="stat-total">...</div>
+                    <div class="records-stat-lbl">Total Records</div>
+                </div>
+            </div>
+            <div class="records-stat-card">
+                <div class="records-stat-icon">📅</div>
+                <div>
+                    <div class="records-stat-val" id="stat-today">...</div>
+                    <div class="records-stat-lbl">Today's Entries</div>
+                </div>
+            </div>
+            <div class="records-stat-card">
+                <div class="records-stat-icon">👥</div>
+                <div>
+                    <div class="records-stat-val" id="stat-avg">...</div>
+                    <div class="records-stat-lbl">Avg Household</div>
+                </div>
+            </div>
+            <div class="records-stat-card">
+                <div class="records-stat-icon">🌐</div>
+                <div>
+                    <div class="records-stat-val" id="stat-internet">...</div>
+                    <div class="records-stat-lbl">Internet Access</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar: Search + Export -->
+        <div class="records-toolbar">
+            <div class="records-search-wrap">
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="searchInput" class="records-search" placeholder="Search by name, house number, phone...">
+            </div>
+            <div class="records-toolbar-actions">
+                <div class="records-count" id="recordsCount">Showing 0 records</div>
+                <button class="btn-export" id="btnExport" onclick="exportToExcel()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Export to Excel
+                </button>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="records-table-wrap" id="tableWrap">
+            <div class="records-loading" id="loadingState">
+                <div class="records-spinner"></div>
+                <p>Loading records...</p>
+            </div>
+            <div class="records-empty" id="emptyState" style="display:none;">
+                <div class="records-empty-icon">📭</div>
+                <p>No records found</p>
+                <span>Try adjusting your search or add new census entries</span>
+            </div>
+            <table class="records-table" id="recordsTable" style="display:none;">
+                <thead>
+                    <tr>
+                        <th class="th-sticky" data-col="id">#</th>
+                        <th data-col="census_house_number">House No.</th>
+                        <th data-col="head_of_family_name">Head of Family</th>
+                        <th data-col="gender">Gender</th>
+                        <th data-col="number_of_people">People</th>
+                        <th data-col="rooms">Rooms</th>
+                        <th data-col="floor_material">Floor</th>
+                        <th data-col="wall_material">Wall</th>
+                        <th data-col="ceiling_material">Ceiling</th>
+                        <th data-col="building_usage">Usage</th>
+                        <th data-col="building_condition">Condition</th>
+                        <th data-col="drinking_water_source">Water</th>
+                        <th data-col="light_source">Light</th>
+                        <th data-col="cooking_fuel">Fuel</th>
+                        <th data-col="internet">Internet</th>
+                        <th data-col="tv">TV</th>
+                        <th data-col="transportation">Transport</th>
+                        <th data-col="primary_food">Food</th>
+                        <th data-col="phone_number">Phone</th>
+                        <th data-col="registered_at">Registered</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="records-pagination" id="pagination" style="display:none;">
+            <button class="page-btn" id="btnPrev" onclick="changePage(-1)">&laquo; Previous</button>
+            <div class="page-info" id="pageInfo">Page 1 of 1</div>
+            <button class="page-btn" id="btnNext" onclick="changePage(1)">Next &raquo;</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+        const ROWS_PER_PAGE = 25;
+
+        let allRecords = [];
+        let filteredRecords = [];
+        let currentPage = 1;
+        let sortCol = "id";
+        let sortAsc = false; // Newest first by default
+
+        // ── Load Stats ──
+        async function loadStats() {
+            try {
+                const resp = await fetch(`${API_URL}/stats`);
+                if (resp.ok) {
+                    const s = await resp.json();
+                    animateCounter("stat-total", s.total_records || 0);
+                    animateCounter("stat-today", s.todays_count || 0);
+                    document.getElementById("stat-avg").textContent = s.average_household_size || "0";
+                    document.getElementById("stat-internet").textContent = (s.internet_pct || 0) + "%";
+                }
+            } catch (e) {
+                console.error("Stats error:", e);
+            }
+        }
+
+        function animateCounter(id, target) {
+            const el = document.getElementById(id);
+            const duration = 800;
+            const start = performance.now();
+            function tick(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(eased * target);
+                if (progress < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        }
+
+        // ── Load Records ──
+        async function loadRecords() {
+            try {
+                const resp = await fetch(`${API_URL}/records`);
+                if (resp.ok) {
+                    allRecords = await resp.json();
+                    filteredRecords = [...allRecords];
+                    currentPage = 1;
+                    renderTable();
+                } else {
+                    showEmptyState("Failed to load records from server.");
+                }
+            } catch (e) {
+                console.error("Records error:", e);
+                showEmptyState("Cannot connect to server. Make sure the backend is running.");
+            }
+        }
+
+        // ── Search ──
+        document.getElementById("searchInput").addEventListener("input", function () {
+            const q = this.value.trim().toLowerCase();
+            if (!q) {
+                filteredRecords = [...allRecords];
+            } else {
+                filteredRecords = allRecords.filter(r =>
+                    (r.head_of_family_name || "").toLowerCase().includes(q) ||
+                    (r.census_house_number || "").toLowerCase().includes(q) ||
+                    (r.phone_number || "").includes(q) ||
+                    (r.gender || "").toLowerCase().includes(q) ||
+                    (r.building_usage || "").toLowerCase().includes(q) ||
+                    (r.drinking_water_source || "").toLowerCase().includes(q) ||
+                    (r.transportation || "").toLowerCase().includes(q)
+                );
+            }
+            currentPage = 1;
+            renderTable();
+        });
+
+        // ── Sort by Column ──
+        document.querySelectorAll(".records-table th").forEach(th => {
+            th.addEventListener("click", () => {
+                const col = th.dataset.col;
+                if (!col) return;
+                if (sortCol === col) {
+                    sortAsc = !sortAsc;
+                } else {
+                    sortCol = col;
+                    sortAsc = true;
+                }
+                // Update sort indicators
+                document.querySelectorAll(".records-table th").forEach(h => {
+                    h.classList.remove("sort-asc", "sort-desc");
+                });
+                th.classList.add(sortAsc ? "sort-asc" : "sort-desc");
+
+                filteredRecords.sort((a, b) => {
+                    let va = a[col], vb = b[col];
+                    if (typeof va === "number" && typeof vb === "number") {
+                        return sortAsc ? va - vb : vb - va;
+                    }
+                    va = String(va || "").toLowerCase();
+                    vb = String(vb || "").toLowerCase();
+                    return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+                });
+                currentPage = 1;
+                renderTable();
+            });
+        });
+
+        // ── Render Table ──
+        function renderTable() {
+            const loading = document.getElementById("loadingState");
+            const empty = document.getElementById("emptyState");
+            const table = document.getElementById("recordsTable");
+            const pagination = document.getElementById("pagination");
+            const countEl = document.getElementById("recordsCount");
+
+            loading.style.display = "none";
+
+            if (filteredRecords.length === 0) {
+                table.style.display = "none";
+                pagination.style.display = "none";
+                empty.style.display = "flex";
+                countEl.textContent = "Showing 0 records";
+                return;
+            }
+
+            empty.style.display = "none";
+            table.style.display = "table";
+
+            const totalPages = Math.ceil(filteredRecords.length / ROWS_PER_PAGE);
+            if (currentPage > totalPages) currentPage = totalPages;
+            const start = (currentPage - 1) * ROWS_PER_PAGE;
+            const pageRecords = filteredRecords.slice(start, start + ROWS_PER_PAGE);
+
+            const tbody = document.getElementById("tableBody");
+            tbody.innerHTML = "";
+
+            pageRecords.forEach((r, i) => {
+                const tr = document.createElement("tr");
+                tr.style.animationDelay = `${i * 20}ms`;
+                tr.innerHTML = `
+                    <td class="td-id">${r.id}</td>
+                    <td>${esc(r.census_house_number)}</td>
+                    <td class="td-name">${esc(r.head_of_family_name)}</td>
+                    <td><span class="badge badge-${(r.gender||'').toLowerCase()}">${esc(r.gender)}</span></td>
+                    <td>${r.number_of_people}</td>
+                    <td>${r.rooms}</td>
+                    <td>${esc(r.floor_material)}</td>
+                    <td>${esc(r.wall_material)}</td>
+                    <td>${esc(r.ceiling_material)}</td>
+                    <td>${esc(r.building_usage)}</td>
+                    <td><span class="badge badge-condition-${(r.building_condition||'').toLowerCase()}">${esc(r.building_condition)}</span></td>
+                    <td>${esc(r.drinking_water_source)}</td>
+                    <td>${esc(r.light_source)}</td>
+                    <td>${esc(r.cooking_fuel)}</td>
+                    <td><span class="badge badge-bool-${(r.internet||'').toLowerCase()}">${esc(r.internet)}</span></td>
+                    <td><span class="badge badge-bool-${(r.tv||'').toLowerCase()}">${esc(r.tv)}</span></td>
+                    <td>${esc(r.transportation)}</td>
+                    <td>${esc(r.primary_food)}</td>
+                    <td class="td-phone">${esc(r.phone_number)}</td>
+                    <td class="td-date">${formatDate(r.registered_at)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Pagination
+            const showFrom = start + 1;
+            const showTo = Math.min(start + ROWS_PER_PAGE, filteredRecords.length);
+            countEl.textContent = `Showing ${showFrom}–${showTo} of ${filteredRecords.length} records`;
+
+            if (totalPages > 1) {
+                pagination.style.display = "flex";
+                document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+                document.getElementById("btnPrev").disabled = currentPage <= 1;
+                document.getElementById("btnNext").disabled = currentPage >= totalPages;
+            } else {
+                pagination.style.display = "none";
+            }
+        }
+
+        function changePage(dir) {
+            const totalPages = Math.ceil(filteredRecords.length / ROWS_PER_PAGE);
+            currentPage = Math.max(1, Math.min(totalPages, currentPage + dir));
+            renderTable();
+            document.getElementById("tableWrap").scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function showEmptyState(msg) {
+            document.getElementById("loadingState").style.display = "none";
+            document.getElementById("recordsTable").style.display = "none";
+            const empty = document.getElementById("emptyState");
+            empty.style.display = "flex";
+            empty.querySelector("p").textContent = msg || "No records found";
+        }
+
+        function esc(str) {
+            if (str === null || str === undefined) return "";
+            const d = document.createElement("div");
+            d.textContent = String(str);
+            return d.innerHTML;
+        }
+
+        function formatDate(dt) {
+            if (!dt) return "—";
+            try {
+                const d = new Date(dt);
+                return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+            } catch {
+                return dt;
+            }
+        }
+
+        // ── Export to Excel ──
+        function exportToExcel() {
+            if (filteredRecords.length === 0) {
+                showToast("No records to export", true);
+                return;
+            }
+
+            showToast("Preparing Excel export...");
+
+            // Column headers in a readable format
+            const headers = {
+                id: "ID",
+                census_house_number: "House Number",
+                head_of_family_name: "Head of Family",
+                gender: "Gender",
+                number_of_people: "Number of People",
+                rooms: "Rooms",
+                married_pairs: "Married Pairs",
+                floor_material: "Floor Material",
+                wall_material: "Wall Material",
+                ceiling_material: "Ceiling Material",
+                building_usage: "Building Usage",
+                building_condition: "Building Condition",
+                drinking_water_source: "Drinking Water Source",
+                water_source_location: "Water Source Location",
+                light_source: "Light Source",
+                sanitation_facilities: "Sanitation Facilities",
+                rest_room: "Rest Room",
+                sewage_flow: "Sewage Flow",
+                bathing_facilities: "Bathing Facilities",
+                cooking_gas: "Cooking Gas",
+                cooking_fuel: "Cooking Fuel",
+                radio: "Radio/Transmitter",
+                tv: "Television",
+                internet: "Internet",
+                laptop_computer: "Laptop/Computer",
+                transportation: "Transportation",
+                primary_food: "Primary Food",
+                phone_number: "Phone Number",
+                registered_at: "Registered At"
+            };
+
+            const orderedKeys = Object.keys(headers);
+            const exportData = filteredRecords.map(r => {
+                const row = {};
+                orderedKeys.forEach(k => {
+                    row[headers[k]] = r[k] !== undefined ? r[k] : "";
+                });
+                return row;
+            });
+
+            try {
+                const ws = XLSX.utils.json_to_sheet(exportData);
+
+                // Auto-width columns
+                const colWidths = orderedKeys.map((k, i) => {
+                    const headerLen = headers[k].length;
+                    let maxLen = headerLen;
+                    filteredRecords.forEach(r => {
+                        const val = String(r[k] || "");
+                        if (val.length > maxLen) maxLen = val.length;
+                    });
+                    return { wch: Math.min(maxLen + 2, 35) };
+                });
+                ws["!cols"] = colWidths;
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Census Records");
+
+                // Generate filename with date
+                const now = new Date();
+                const dateStr = now.toISOString().slice(0, 10);
+                const filename = `Census_Records_${dateStr}.xlsx`;
+
+                XLSX.writeFile(wb, filename);
+                showToast(`Exported ${filteredRecords.length} records to ${filename}`);
+            } catch (e) {
+                console.error("Export error:", e);
+                showToast("Export failed: " + e.message, true);
+            }
+        }
+
+        // ── Toast ──
+        function showToast(message, isError = false) {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            toast.className = `toast-msg${isError ? " error" : ""}`;
+            toast.innerHTML = `
+                <span>${isError ? '⚠️' : '✅'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(50px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // ── Init ──
+        window.addEventListener("DOMContentLoaded", () => {
+            loadStats();
+            loadRecords();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Census AI Assistant - Natural language access to census data">
+    <title>Census AI Assistant</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/byok.js"></script>
+</head>
+<body>
+    <div class="bg-decor"></div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="chat-container">
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <a href="index.html" class="btn-back">
+                    &larr; Back to Form
+                </a>
+                <button class="btn-back" id="btnToggleSettings" onclick="toggleSettingsModal()">
+                    ⚙️ BYOK Settings
+                </button>
+            </div>
+            <div style="text-align: right;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: #fff; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                    Census AI Assistant
+                    <span id="byokHeaderBadge" class="byok-indicator-badge" style="display: none;">BYOK⚡</span>
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Socioeconomic Survey Insight Engine</p>
+            </div>
+        </div>
+
+        <!-- Chat Stats Grid -->
+        <div class="chat-stats-grid">
+            <div class="chat-stat-card">
+                <div class="chat-stat-val" id="stat-total-households">...</div>
+                <div class="chat-stat-lbl">Total Households</div>
+            </div>
+            <div class="chat-stat-card">
+                <div class="chat-stat-val" id="stat-today-registrations">...</div>
+                <div class="chat-stat-lbl">Today's Registrations</div>
+            </div>
+            <div class="chat-stat-card">
+                <div class="chat-stat-val" id="stat-internet-access">...</div>
+                <div class="chat-stat-lbl">Internet Access %</div>
+            </div>
+            <div class="chat-stat-card">
+                <div class="chat-stat-val" id="stat-avg-size">...</div>
+                <div class="chat-stat-lbl">Avg Household Size</div>
+            </div>
+        </div>
+
+        <!-- Quick Questions -->
+        <div>
+            <div class="quick-questions-label">Quick Insights</div>
+            <div class="quick-questions">
+                <button class="quick-btn" onclick="sendQuickQuestion(this)">How many households registered today?</button>
+                <button class="quick-btn" onclick="sendQuickQuestion(this)">What percentage have internet access?</button>
+                <button class="quick-btn" onclick="sendQuickQuestion(this)">Which cooking fuel is most common?</button>
+                <button class="quick-btn" onclick="sendQuickQuestion(this)">How many households lack proper sanitation?</button>
+            </div>
+        </div>
+
+        <!-- Chat History -->
+        <div class="chat-history" id="chatHistory">
+            <!-- Initial Greeting -->
+            <div class="message ai">
+                Hello! I am your Census AI Assistant. You can ask me any question about the Indian socioeconomic survey data, and I will analyze the database to give you an answer. Try a quick question above or type your own!
+            </div>
+
+            <!-- Typing Indicator (hidden by default) -->
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+
+        <!-- Input Footer -->
+        <div class="chat-footer">
+            <div class="chat-input-wrap">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Ask a question about the census data..." onkeydown="handleInputKeydown(event)">
+            </div>
+            <button class="btn-send" id="btnSend" onclick="submitQuestion()">Send</button>
+        </div>
+    </div>
+
+    <!-- BYOK Settings Modal -->
+    <div class="byok-modal-overlay" id="byokSettingsModal" style="display: none;">
+        <div class="byok-modal-card">
+            <div class="byok-modal-header">
+                <h3>Bring Your Own Key (BYOK)</h3>
+                <button class="byok-close-btn" onclick="toggleSettingsModal()">&times;</button>
+            </div>
+            <div class="byok-modal-body">
+                <!-- Toggle Mode -->
+                <div class="byok-form-group">
+                    <label class="byok-switch-label">
+                        <span>Enable Client-Side BYOK AI</span>
+                        <div>
+                            <input type="checkbox" id="byokEnabledToggle" onchange="handleBYOKToggle()">
+                            <span class="byok-slider"></span>
+                        </div>
+                    </label>
+                    <p class="byok-help-text">When enabled, AI generation runs directly in your browser using your custom keys instead of the server key.</p>
+                </div>
+
+                <!-- Provider Selector -->
+                <div class="byok-form-group byok-conditional">
+                    <label for="byokProviderSelect">AI Provider</label>
+                    <select id="byokProviderSelect" onchange="handleProviderChange()">
+                        <option value="gemini">Google Gemini</option>
+                        <option value="groq">Groq / OpenAI-Compatible</option>
+                    </select>
+                </div>
+
+                <!-- API Key -->
+                <div class="byok-form-group byok-conditional">
+                    <label for="byokApiKeyInput">API Key</label>
+                    <div style="position: relative;">
+                        <input type="password" id="byokApiKeyInput" placeholder="Enter your API key..." style="padding-right: 46px;">
+                        <button type="button" class="byok-visibility-btn" id="btnToggleKeyVisibility" onclick="toggleKeyVisibility()">👁️</button>
+                    </div>
+                </div>
+
+                <!-- Endpoint URL (Conditional for Groq/OpenAI) -->
+                <div class="byok-form-group byok-conditional" id="groqEndpointGroup" style="display: none;">
+                    <label for="byokEndpointInput">Endpoint Base URL</label>
+                    <input type="text" id="byokEndpointInput" placeholder="https://api.groq.com/openai/v1">
+                    <p class="byok-help-text">Base URL for OpenAI-compatible completions.</p>
+                </div>
+
+                <!-- Model Selection -->
+                <div class="byok-form-group byok-conditional">
+                    <label>Model Name</label>
+                    <div id="geminiModelContainer">
+                        <select id="byokGeminiModelSelect" onchange="handleGeminiModelChange()">
+                            <option value="gemini-2.0-flash">gemini-2.0-flash (Recommended)</option>
+                            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                            <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                            <option value="custom">Custom Model...</option>
+                        </select>
+                        <input type="text" id="byokGeminiModelCustom" placeholder="e.g. gemini-2.5-flash" style="display: none; margin-top: 8px;">
+                    </div>
+                    <div id="groqModelContainer" style="display: none;">
+                        <select id="byokGroqModelSelect" onchange="handleGroqModelChange()">
+                            <option value="mixtral-8x7b-32768">mixtral-8x7b-32768 (Groq)</option>
+                            <option value="llama3-8b-8192">llama3-8b-8192 (Groq)</option>
+                            <option value="llama3-70b-8192">llama3-70b-8192 (Groq)</option>
+                            <option value="custom">Custom Model...</option>
+                        </select>
+                        <input type="text" id="byokGroqModelCustom" placeholder="e.g. gpt-4o" style="display: none; margin-top: 8px;">
+                    </div>
+                </div>
+
+                <!-- Test Connection Row -->
+                <div class="byok-actions-row">
+                    <button type="button" class="byok-test-btn" id="btnTestBYOK" onclick="testBYOKConnection()">Test Connection</button>
+                    <span id="byokTestStatus" class="byok-status-badge"></span>
+                </div>
+            </div>
+            <div class="byok-modal-footer">
+                <button type="button" class="byok-save-btn" onclick="saveBYOKSettings()">Save & Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+        const chatHistory = document.getElementById("chatHistory");
+        const chatInput = document.getElementById("chatInput");
+        const typingIndicator = document.getElementById("typingIndicator");
+        const btnSend = document.getElementById("btnSend");
+
+        // Load stats on page load
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/stats`);
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById("stat-total-households").textContent = stats.total_records || 0;
+                    document.getElementById("stat-today-registrations").textContent = stats.todays_count || 0;
+                    document.getElementById("stat-internet-access").textContent = (stats.internet_pct || 0) + "%";
+                    document.getElementById("stat-avg-size").textContent = stats.average_household_size || "0.0";
+                } else {
+                    console.error("Failed to load stats");
+                }
+            } catch (err) {
+                console.error("Error connecting to server for stats:", err);
+            }
+        }
+
+        // Display beautiful toasts
+        function showToast(message, isError = false) {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            toast.className = `toast-msg${isError ? " error" : ""}`;
+            toast.innerHTML = `
+                <span>${isError ? '⚠️' : '✅'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            
+            // Auto remove toast
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(50px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Add message to chat area
+        function appendMessage(text, isUser = false) {
+            const msg = document.createElement("div");
+            msg.className = `message ${isUser ? 'user' : 'ai'}`;
+            msg.textContent = text;
+            
+            // Insert before typing indicator
+            chatHistory.insertBefore(msg, typingIndicator);
+            
+            // Scroll to bottom
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // Show/hide typing indicator
+        function setTypingState(isTyping) {
+            if (isTyping) {
+                typingIndicator.style.display = "flex";
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            } else {
+                typingIndicator.style.display = "none";
+            }
+        }
+
+        // Send a message
+        async function submitQuestion() {
+            const question = chatInput.value.trim();
+            if (!question) return;
+
+            // Clear input
+            chatInput.value = "";
+            chatInput.blur();
+
+            // Append user message
+            appendMessage(question, true);
+
+            // Show typing indicator
+            setTypingState(true);
+            chatInput.disabled = true;
+            btnSend.disabled = true;
+
+            // Check if BYOK Client is active
+            if (BYOKStorage.isEnabled()) {
+                try {
+                    const client = getBYOKClient();
+                    if (!client) {
+                        throw new Error(BYOK_ERRORS.NO_API_KEY);
+                    }
+
+                    // 1. Generate SQL
+                    const sqlQuery = await client.generateSQL(question);
+                    console.log("BYOK Generated SQL:", sqlQuery);
+
+                    // 2. Execute SQL against database
+                    const dbResponse = await fetch(`${API_URL}/run-sql`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ sql: sqlQuery })
+                    });
+
+                    if (!dbResponse.ok) {
+                        const errDetail = await dbResponse.json();
+                        throw new Error(`Database Error: ${errDetail.detail || "Failed to execute SQL query."}`);
+                    }
+
+                    const dbData = await dbResponse.json();
+                    const dbResults = dbData.results;
+                    console.log("BYOK SQL Query Result:", dbResults);
+
+                    // 3. Humanize result
+                    const answer = await client.humanizeResult(question, sqlQuery, dbResults);
+
+                    setTypingState(false);
+                    chatInput.disabled = false;
+                    btnSend.disabled = false;
+                    chatInput.focus();
+
+                    appendMessage(answer || "No response received.");
+                } catch (err) {
+                    console.error("BYOK Ask error:", err);
+                    setTypingState(false);
+                    chatInput.disabled = false;
+                    btnSend.disabled = false;
+                    chatInput.focus();
+
+                    // Translate clean errors
+                    let errMsg = "Something went wrong.";
+                    if (err.message === BYOK_ERRORS.NO_API_KEY) {
+                        errMsg = "Error: No API key configured. Please open BYOK Settings and enter your key.";
+                        showToast("API Key is missing", true);
+                    } else if (err.message === BYOK_ERRORS.INVALID_API_KEY) {
+                        errMsg = "Error: Invalid API Key. Please check your credentials in the BYOK Settings.";
+                        showToast("Invalid API credentials", true);
+                    } else if (err.message === BYOK_ERRORS.RATE_LIMITED) {
+                        errMsg = "Error: Rate Limit Exceeded. You are being rate-limited by the provider. Please try again in a moment.";
+                        showToast("Rate limit exceeded", true);
+                    } else if (err.message === BYOK_ERRORS.NETWORK_ERROR) {
+                        errMsg = "Error: Network connection failed. Please check your internet connection or Endpoint URL.";
+                        showToast("Network connection error", true);
+                    } else {
+                        errMsg = err.message || "Failed to communicate with client-side AI assistant.";
+                    }
+                    appendMessage(errMsg);
+                }
+                return;
+            }
+
+            // Otherwise, fallback to the original default server AI
+            try {
+                const response = await fetch(`${API_URL}/ask`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ question })
+                });
+
+                setTypingState(false);
+                chatInput.disabled = false;
+                btnSend.disabled = false;
+                chatInput.focus();
+
+                if (response.ok) {
+                    const result = await response.json();
+                    appendMessage(result.answer || "No response received.");
+                } else {
+                    const errDetail = await response.json();
+                    appendMessage(`Error: ${errDetail.detail || "Something went wrong on the server."}`);
+                }
+            } catch (err) {
+                console.error("Ask error:", err);
+                setTypingState(false);
+                chatInput.disabled = false;
+                btnSend.disabled = false;
+                chatInput.focus();
+                appendMessage("Failed to reach the server. Please ensure the backend is running at http://localhost:8000.");
+            }
+        }
+
+        // Handle quick questions
+        function sendQuickQuestion(button) {
+            chatInput.value = button.textContent;
+            submitQuestion();
+        }
+
+        // Handle Enter keypress
+        function handleInputKeydown(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                submitQuestion();
+            }
+        }
+
+        // BYOK UI Controller Logic
+        function toggleSettingsModal() {
+            const modal = document.getElementById("byokSettingsModal");
+            if (modal.classList.contains("active")) {
+                modal.classList.remove("active");
+                setTimeout(() => modal.style.display = "none", 300);
+            } else {
+                loadBYOKSettingsToUI();
+                modal.style.display = "flex";
+                setTimeout(() => modal.classList.add("active"), 10);
+            }
+        }
+
+        function loadBYOKSettingsToUI() {
+            const enabled = BYOKStorage.isEnabled();
+            document.getElementById("byokEnabledToggle").checked = enabled;
+
+            const provider = BYOKStorage.getProvider();
+            document.getElementById("byokProviderSelect").value = provider;
+
+            const key = BYOKStorage.getKey(provider);
+            document.getElementById("byokApiKeyInput").value = key;
+
+            const endpoint = BYOKStorage.getEndpoint('groq');
+            document.getElementById("byokEndpointInput").value = endpoint;
+
+            // Reset connection test status badge
+            const badge = document.getElementById("byokTestStatus");
+            badge.className = "byok-status-badge";
+            badge.style.display = "none";
+            badge.textContent = "";
+
+            // Toggle fields visibility
+            handleBYOKToggle();
+            handleProviderChange();
+
+            // Set model selections
+            const model = BYOKStorage.getModel(provider);
+            if (provider === 'gemini') {
+                const select = document.getElementById("byokGeminiModelSelect");
+                const customInput = document.getElementById("byokGeminiModelCustom");
+                if (select.querySelector(`option[value="${model}"]`)) {
+                    select.value = model;
+                    customInput.style.display = "none";
+                } else {
+                    select.value = "custom";
+                    customInput.value = model;
+                    customInput.style.display = "block";
+                }
+            } else {
+                const select = document.getElementById("byokGroqModelSelect");
+                const customInput = document.getElementById("byokGroqModelCustom");
+                if (select.querySelector(`option[value="${model}"]`)) {
+                    select.value = model;
+                    customInput.style.display = "none";
+                } else {
+                    select.value = "custom";
+                    customInput.value = model;
+                    customInput.style.display = "block";
+                }
+            }
+        }
+
+        function handleBYOKToggle() {
+            const enabled = document.getElementById("byokEnabledToggle").checked;
+            const conditionals = document.querySelectorAll(".byok-conditional");
+            conditionals.forEach(el => {
+                if (enabled) {
+                    const provider = document.getElementById("byokProviderSelect").value;
+                    if (el.id === "groqEndpointGroup" && provider !== "groq") {
+                        el.style.display = "none";
+                    } else {
+                        el.style.display = "flex";
+                    }
+                } else {
+                    el.style.display = "none";
+                }
+            });
+        }
+
+        function handleProviderChange() {
+            const provider = document.getElementById("byokProviderSelect").value;
+            const endpointGroup = document.getElementById("groqEndpointGroup");
+            const geminiModels = document.getElementById("geminiModelContainer");
+            const groqModels = document.getElementById("groqModelContainer");
+            const enabled = document.getElementById("byokEnabledToggle").checked;
+
+            if (!enabled) return;
+
+            if (provider === 'gemini') {
+                endpointGroup.style.display = "none";
+                geminiModels.style.display = "block";
+                groqModels.style.display = "none";
+            } else {
+                endpointGroup.style.display = "flex";
+                geminiModels.style.display = "none";
+                groqModels.style.display = "block";
+            }
+
+            // Load key for this provider
+            const key = BYOKStorage.getKey(provider);
+            document.getElementById("byokApiKeyInput").value = key;
+        }
+
+        function toggleKeyVisibility() {
+            const input = document.getElementById("byokApiKeyInput");
+            const btn = document.getElementById("btnToggleKeyVisibility");
+            if (input.type === "password") {
+                input.type = "text";
+                btn.textContent = "🙈";
+            } else {
+                input.type = "password";
+                btn.textContent = "👁️";
+            }
+        }
+
+        function handleGeminiModelChange() {
+            const val = document.getElementById("byokGeminiModelSelect").value;
+            const custom = document.getElementById("byokGeminiModelCustom");
+            if (val === "custom") {
+                custom.style.display = "block";
+            } else {
+                custom.style.display = "none";
+            }
+        }
+
+        function handleGroqModelChange() {
+            const val = document.getElementById("byokGroqModelSelect").value;
+            const custom = document.getElementById("byokGroqModelCustom");
+            if (val === "custom") {
+                custom.style.display = "block";
+            } else {
+                custom.style.display = "none";
+            }
+        }
+
+        async function testBYOKConnection() {
+            const provider = document.getElementById("byokProviderSelect").value;
+            const key = document.getElementById("byokApiKeyInput").value.trim();
+            const statusBadge = document.getElementById("byokTestStatus");
+
+            if (!key) {
+                statusBadge.textContent = "Missing Key";
+                statusBadge.className = "byok-status-badge error";
+                statusBadge.style.display = "inline-block";
+                showToast("Please enter an API Key first", true);
+                return;
+            }
+
+            statusBadge.textContent = "Testing...";
+            statusBadge.className = "byok-status-badge testing";
+            statusBadge.style.display = "inline-block";
+            document.getElementById("btnTestBYOK").disabled = true;
+
+            try {
+                let testClient;
+                if (provider === 'gemini') {
+                    const selectVal = document.getElementById("byokGeminiModelSelect").value;
+                    const modelName = selectVal === "custom" ? document.getElementById("byokGeminiModelCustom").value.trim() : selectVal;
+                    testClient = new GeminiClient(key, modelName || "gemini-2.0-flash");
+                } else {
+                    const endpoint = document.getElementById("byokEndpointInput").value.trim() || "https://api.groq.com/openai/v1";
+                    const selectVal = document.getElementById("byokGroqModelSelect").value;
+                    const modelName = selectVal === "custom" ? document.getElementById("byokGroqModelCustom").value.trim() : selectVal;
+                    testClient = new GroqClient(key, endpoint, modelName || "mixtral-8x7b-32768");
+                }
+
+                const success = await testClient.testConnection();
+                if (success) {
+                    statusBadge.textContent = "Connected";
+                    statusBadge.className = "byok-status-badge success";
+                    showToast("Connection test successful!");
+                }
+            } catch (err) {
+                console.error("Test connection failed:", err);
+                let errMsg = "Failed";
+                if (err.message === BYOK_ERRORS.INVALID_API_KEY) {
+                    errMsg = "Invalid Key";
+                    showToast("Invalid API Key. Please verify.", true);
+                } else if (err.message === BYOK_ERRORS.RATE_LIMITED) {
+                    errMsg = "Rate Limited";
+                    showToast("Rate limit exceeded. Please wait.", true);
+                } else if (err.message === BYOK_ERRORS.NETWORK_ERROR) {
+                    errMsg = "Network Error";
+                    showToast("Network connection error. Check base URL or internet.", true);
+                } else {
+                    errMsg = "Error";
+                    showToast(err.message || "Failed to verify connection", true);
+                }
+                statusBadge.textContent = errMsg;
+                statusBadge.className = "byok-status-badge error";
+            } finally {
+                document.getElementById("btnTestBYOK").disabled = false;
+            }
+        }
+
+        function saveBYOKSettings() {
+            const enabled = document.getElementById("byokEnabledToggle").checked;
+            BYOKStorage.setEnabled(enabled);
+
+            const provider = document.getElementById("byokProviderSelect").value;
+            BYOKStorage.setProvider(provider);
+
+            const key = document.getElementById("byokApiKeyInput").value.trim();
+            if (key) {
+                BYOKStorage.saveKey(provider, key);
+            } else {
+                BYOKStorage.deleteKey(provider);
+            }
+
+            if (provider === 'gemini') {
+                const select = document.getElementById("byokGeminiModelSelect").value;
+                const model = select === "custom" ? document.getElementById("byokGeminiModelCustom").value.trim() : select;
+                BYOKStorage.setModel('gemini', model || 'gemini-2.0-flash');
+            } else {
+                const select = document.getElementById("byokGroqModelSelect").value;
+                const model = select === "custom" ? document.getElementById("byokGroqModelCustom").value.trim() : select;
+                BYOKStorage.setModel('groq', model || 'mixtral-8x7b-32768');
+
+                const endpoint = document.getElementById("byokEndpointInput").value.trim();
+                BYOKStorage.setEndpoint('groq', endpoint || 'https://api.groq.com/openai/v1');
+            }
+
+            updateHeaderBadge();
+            toggleSettingsModal();
+            showToast("Settings saved successfully.");
+        }
+
+        function updateHeaderBadge() {
+            const badge = document.getElementById("byokHeaderBadge");
+            if (BYOKStorage.isEnabled()) {
+                const provider = BYOKStorage.getProvider();
+                badge.textContent = `BYOK: ${provider === 'gemini' ? 'Gemini' : 'Groq'} ⚡`;
+                badge.style.display = "inline-flex";
+            } else {
+                badge.style.display = "none";
+            }
+        }
+
+        // Initialize Page
+        window.addEventListener("DOMContentLoaded", () => {
+            loadStats();
+            updateHeaderBadge();
+        });
+    </script>
+</body>
+</html>

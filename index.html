@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Census Survey System - Government Socioeconomic Survey">
+    <title>Census Survey System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="bg-decor"></div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <h1 id="main-title">Census Survey System</h1>
+            <p class="subtitle">Government Socioeconomic Survey</p>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stats-item">
+                <span class="stats-label">Total Registered</span>
+                <span class="stats-value" id="stat-total">...</span>
+            </div>
+            <div class="stats-divider"></div>
+            <div class="stats-item">
+                <span class="stats-label">Registered Today</span>
+                <span class="stats-value" id="stat-today">...</span>
+            </div>
+            <div class="stats-divider"></div>
+            <div class="stats-item">
+                <span class="stats-label">Avg Household Size</span>
+                <span class="stats-value" id="stat-avg-size">...</span>
+            </div>
+            <div class="stats-divider"></div>
+            <div class="stats-item">
+                <a href="records.html" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <span class="stats-label">Saved Responses</span>
+                    <span class="stats-value" style="font-size:1rem; display:flex; align-items:center; gap:6px;">📋 View All →</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Census Survey Form -->
+        <form class="survey-form" id="censusForm">
+            <!-- SECTION 1 -->
+            <div class="form-section">
+                <h2 class="section-title">
+                    <span class="section-number">1</span>
+                    House Information
+                </h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="census_house_number">Census House Number <span class="req">*</span></label>
+                        <input type="text" id="census_house_number" name="census_house_number" placeholder="Enter house number (e.g. 101)" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="building_usage">Building Usage <span class="req">*</span></label>
+                        <select id="building_usage" name="building_usage" required onchange="handleBuildingUsageChange()">
+                            <option value="" disabled selected>Select usage...</option>
+                            <option value="Residential">Residential</option>
+                            <option value="Residential-cum-other use">Residential-cum-other use</option>
+                            <option value="Shop">Shop</option>
+                            <option value="Office">Office</option>
+                            <option value="School">School</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="floor_material">Main Material of Floor <span class="req">*</span></label>
+                        <select id="floor_material" name="floor_material" required>
+                            <option value="" disabled selected>Select floor material...</option>
+                            <option value="Mud/Dirt">Mud/Dirt</option>
+                            <option value="Wood">Wood</option>
+                            <option value="Brick">Brick</option>
+                            <option value="Cement">Cement</option>
+                            <option value="Mosaic/Tile">Mosaic/Tile</option>
+                            <option value="Stone">Stone</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="wall_material">Main Material of Walls <span class="req">*</span></label>
+                        <select id="wall_material" name="wall_material" required>
+                            <option value="" disabled selected>Select wall material...</option>
+                            <option value="Grass/Thatch">Grass/Thatch</option>
+                            <option value="Plastic/Polythene">Plastic/Polythene</option>
+                            <option value="Mud">Mud</option>
+                            <option value="Wood">Wood</option>
+                            <option value="Burnt Brick">Burnt Brick</option>
+                            <option value="Stone">Stone</option>
+                            <option value="Cement">Cement</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="ceiling_material">Main Material of Ceiling <span class="req">*</span></label>
+                        <select id="ceiling_material" name="ceiling_material" required>
+                            <option value="" disabled selected>Select ceiling material...</option>
+                            <option value="Grass/Thatch">Grass/Thatch</option>
+                            <option value="Plastic">Plastic</option>
+                            <option value="Wood">Wood</option>
+                            <option value="Brick/Lime">Brick/Lime</option>
+                            <option value="Tiles">Tiles</option>
+                            <option value="Cement">Cement</option>
+                            <option value="RCC">RCC</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="building_condition">Condition of Building <span class="req">*</span></label>
+                        <select id="building_condition" name="building_condition" required>
+                            <option value="" disabled selected>Select condition...</option>
+                            <option value="Good">Good</option>
+                            <option value="Liveable">Liveable</option>
+                            <option value="Dilapidated">Dilapidated</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="rooms">Number of Rooms <span class="req">*</span></label>
+                        <input type="number" id="rooms" name="rooms" min="0" placeholder="Number of rooms" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2 -->
+            <div class="form-section">
+                <h2 class="section-title">
+                    <span class="section-number">2</span>
+                    Family Information
+                </h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="head_of_family_name">Name of Head of Family <span class="req" id="head-req">*</span></label>
+                        <input type="text" id="head_of_family_name" name="head_of_family_name" placeholder="Name of head of family" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="gender">Gender <span class="req" id="gender-req">*</span></label>
+                        <select id="gender" name="gender" required>
+                            <option value="" disabled selected>Select gender...</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="number_of_people">Total Number of People in House <span class="req">*</span></label>
+                        <input type="number" id="number_of_people" name="number_of_people" min="0" placeholder="Number of people" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="married_pairs">Number of Married Pairs <span class="req">*</span></label>
+                        <input type="number" id="married_pairs" name="married_pairs" min="0" placeholder="Number of married pairs" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone_number">Phone Number (10 digits) <span class="req">*</span></label>
+                        <input type="tel" id="phone_number" name="phone_number" placeholder="Enter 10-digit mobile number" maxlength="10" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3 -->
+            <div class="form-section">
+                <h2 class="section-title">
+                    <span class="section-number">3</span>
+                    Water and Sanitation
+                </h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="drinking_water_source">Drinking Water Source <span class="req">*</span></label>
+                        <select id="drinking_water_source" name="drinking_water_source" required>
+                            <option value="" disabled selected>Select water source...</option>
+                            <option value="Tap/Piped water">Tap/Piped water</option>
+                            <option value="Hand pump">Hand pump</option>
+                            <option value="Tubewell/Borewell">Tubewell/Borewell</option>
+                            <option value="Well">Well</option>
+                            <option value="River/Canal">River/Canal</option>
+                            <option value="Tank/Pond">Tank/Pond</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="water_source_location">Location of Water Source <span class="req">*</span></label>
+                        <select id="water_source_location" name="water_source_location" required>
+                            <option value="" disabled selected>Select water location...</option>
+                            <option value="Within premises">Within premises</option>
+                            <option value="Within 100m">Within 100m</option>
+                            <option value="100m to 500m">100m to 500m</option>
+                            <option value="More than 500m">More than 500m</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sanitation_facilities">Sanitation Facilities <span class="req">*</span></label>
+                        <select id="sanitation_facilities" name="sanitation_facilities" required>
+                            <option value="" disabled selected>Select sanitation type...</option>
+                            <option value="Flush/Pour flush">Flush/Pour flush</option>
+                            <option value="Pit latrine">Pit latrine</option>
+                            <option value="Open defecation">Open defecation</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="rest_room">Rest Room <span class="req">*</span></label>
+                        <select id="rest_room" name="rest_room" required>
+                            <option value="" disabled selected>Select rest room status...</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sewage_flow">Sewage Flow <span class="req">*</span></label>
+                        <select id="sewage_flow" name="sewage_flow" required>
+                            <option value="" disabled selected>Select sewage type...</option>
+                            <option value="Closed drainage">Closed drainage</option>
+                            <option value="Open drainage">Open drainage</option>
+                            <option value="No drainage">No drainage</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bathing_facilities">In Premises Bathing Facilities <span class="req">*</span></label>
+                        <select id="bathing_facilities" name="bathing_facilities" required>
+                            <option value="" disabled selected>Select bathing status...</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4 -->
+            <div class="form-section">
+                <h2 class="section-title">
+                    <span class="section-number">4</span>
+                    Energy
+                </h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="light_source">Light Source <span class="req">*</span></label>
+                        <select id="light_source" name="light_source" required>
+                            <option value="" disabled selected>Select light source...</option>
+                            <option value="Electricity">Electricity</option>
+                            <option value="Kerosene">Kerosene</option>
+                            <option value="Solar">Solar</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cooking_gas">Cooking Gas <span class="req">*</span></label>
+                        <select id="cooking_gas" name="cooking_gas" required>
+                            <option value="" disabled selected>Select gas usage...</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cooking_fuel">Cooking Fuel <span class="req">*</span></label>
+                        <select id="cooking_fuel" name="cooking_fuel" required>
+                            <option value="" disabled selected>Select cooking fuel...</option>
+                            <option value="LPG">LPG</option>
+                            <option value="Firewood">Firewood</option>
+                            <option value="Crop residue">Crop residue</option>
+                            <option value="Cow dung">Cow dung</option>
+                            <option value="Kerosene">Kerosene</option>
+                            <option value="Coal">Coal</option>
+                            <option value="Electricity">Electricity</option>
+                            <option value="Biogas">Biogas</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 5 -->
+            <div class="form-section">
+                <h2 class="section-title">
+                    <span class="section-number">5</span>
+                    Assets and Lifestyle
+                </h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="radio">Radio/Transmitter <span class="req">*</span></label>
+                        <select id="radio" name="radio" required>
+                            <option value="" disabled selected>Select radio status...</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tv">Television <span class="req">*</span></label>
+                        <select id="tv" name="tv" required>
+                            <option value="" disabled selected>Select TV status...</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="internet">Internet Connection <span class="req">*</span></label>
+                        <select id="internet" name="internet" required>
+                            <option value="" disabled selected>Select internet status...</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="laptop_computer">Laptop/Computer <span class="req">*</span></label>
+                        <select id="laptop_computer" name="laptop_computer" required>
+                            <option value="" disabled selected>Select computer status...</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="transportation">Primary Mode of Transportation <span class="req">*</span></label>
+                        <select id="transportation" name="transportation" required>
+                            <option value="" disabled selected>Select transportation...</option>
+                            <option value="Walking">Walking</option>
+                            <option value="Bicycle">Bicycle</option>
+                            <option value="Motorcycle/Scooter">Motorcycle/Scooter</option>
+                            <option value="Car/Jeep">Car/Jeep</option>
+                            <option value="Auto/Taxi">Auto/Taxi</option>
+                            <option value="Bus">Bus</option>
+                            <option value="Train">Train</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="primary_food">Primary Consumed Food <span class="req">*</span></label>
+                        <select id="primary_food" name="primary_food" required>
+                            <option value="" disabled selected>Select food preference...</option>
+                            <option value="Vegetarian">Vegetarian</option>
+                            <option value="Non-Vegetarian">Non-Vegetarian</option>
+                            <option value="Vegan">Vegan</option>
+                            <option value="Mixed">Mixed</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="btn-primary" id="btnSubmit">
+                Submit Census Data
+            </button>
+        </form>
+    </div>
+
+    <!-- Floating Action Buttons -->
+    <a href="records.html" class="fab-chat" style="bottom: 95px; background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 5px 25px rgba(16,185,129,0.35);" aria-label="View Saved Records">
+        <span>📋 Records</span>
+    </a>
+    <a href="chat.html" class="fab-chat" aria-label="Ask AI Assistant">
+        <span>Ask AI 🤖</span>
+    </a>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+
+        // Load stats on page load
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/stats`);
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById("stat-total").textContent = stats.total_records || 0;
+                    document.getElementById("stat-today").textContent = stats.todays_count || 0;
+                    document.getElementById("stat-avg-size").textContent = stats.average_household_size || "0.0";
+                } else {
+                    console.error("Failed to fetch stats");
+                }
+            } catch (err) {
+                console.error("Error connecting to server for stats:", err);
+            }
+        }
+
+        // Adjust validation requirement for Head of Family name and Gender based on building usage.
+        // If building usage is Empty, Head of family and Gender are set to 'N/A' and not required.
+        function handleBuildingUsageChange() {
+            const usage = document.getElementById("building_usage").value;
+            const headInput = document.getElementById("head_of_family_name");
+            const genderSelect = document.getElementById("gender");
+            const headReq = document.getElementById("head-req");
+            const genderReq = document.getElementById("gender-req");
+            const numPeopleInput = document.getElementById("number_of_people");
+            const marriedPairsInput = document.getElementById("married_pairs");
+
+            if (usage === "Empty") {
+                headInput.value = "N/A";
+                headInput.required = false;
+                if (headReq) headReq.style.display = "none";
+
+                genderSelect.value = "Other";
+                genderSelect.required = false;
+                if (genderReq) genderReq.style.display = "none";
+
+                numPeopleInput.value = "0";
+                marriedPairsInput.value = "0";
+            } else {
+                if (headInput.value === "N/A") headInput.value = "";
+                headInput.required = true;
+                if (headReq) headReq.style.display = "inline";
+
+                if (genderSelect.value === "Other" && usage !== "Empty") genderSelect.value = "";
+                genderSelect.required = true;
+                if (genderReq) genderReq.style.display = "inline";
+
+                if (numPeopleInput.value === "0") numPeopleInput.value = "";
+                if (marriedPairsInput.value === "0") marriedPairsInput.value = "";
+            }
+        }
+
+        // Display beautiful toasts
+        function showToast(message, isError = false) {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            toast.className = `toast-msg${isError ? " error" : ""}`;
+            toast.innerHTML = `
+                <span>${isError ? '⚠️' : '✅'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            
+            // Auto remove toast
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(50px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Form Submit Handler
+        document.getElementById("censusForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById("btnSubmit");
+            
+            // Frontend validation: Phone number is 10 digits
+            const phoneInput = document.getElementById("phone_number");
+            const phoneNumber = phoneInput.value.trim();
+            if (!/^\d{10}$/.test(phoneNumber)) {
+                showToast("Phone number must be exactly 10 digits", true);
+                phoneInput.focus();
+                return;
+            }
+
+            // Validation: Married pairs cannot exceed possible (i.e. married_pairs * 2 <= number_of_people)
+            const numPeople = parseInt(document.getElementById("number_of_people").value) || 0;
+            const marriedPairs = parseInt(document.getElementById("married_pairs").value) || 0;
+            if (marriedPairs * 2 > numPeople) {
+                showToast("Number of married pairs cannot exceed half the total number of people", true);
+                document.getElementById("married_pairs").focus();
+                return;
+            }
+
+            // Gather data
+            const formData = new FormData(this);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+
+            // Convert numbers
+            data.number_of_people = parseInt(data.number_of_people) || 0;
+            data.rooms = parseInt(data.rooms) || 0;
+            data.married_pairs = parseInt(data.married_pairs) || 0;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Submitting...";
+
+            try {
+                const response = await fetch(`${API_URL}/submit`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showToast(result.message || "Census record saved successfully");
+                    
+                    // Reset form after 2 seconds
+                    setTimeout(() => {
+                        document.getElementById("censusForm").reset();
+                        // Re-enable submit
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = "Submit Census Data";
+                        // Re-load stats
+                        loadStats();
+                    }, 2000);
+                } else {
+                    const errDetail = await response.json();
+                    showToast(errDetail.detail || "Submission failed", true);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Submit Census Data";
+                }
+            } catch (err) {
+                console.error("Submit error:", err);
+                showToast("Connection to server failed. Please ensure the backend is running.", true);
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Submit Census Data";
+            }
+        });
+
+        // Initialize Page
+        window.addEventListener("DOMContentLoaded", () => {
+            loadStats();
+        });
+    </script>
+</body>
+</html>

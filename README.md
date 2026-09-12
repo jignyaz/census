@@ -1,3 +1,8 @@
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)
+![SQLite](https://img.shields.io/badge/SQLite-07405E?style=flat&logo=sqlite&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google%20Gemini-4285F4?style=flat&logo=google&logoColor=white)
+
 # Census Survey System & AI Assistant
 
 A modern socioeconomic survey system designed for Indian government census mapping. This application features a multi-step census survey form, a detailed real-time statistics dashboard, and an integrated AI Chat Assistant capable of translating natural language queries into safe SQL statements to query the SQLite census database directly.

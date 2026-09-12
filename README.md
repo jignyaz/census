@@ -79,5 +79,4 @@ Once running, access the web pages at:
 
 ---
 
-## License
-Government Socioeconomic Survey tool. Designed for official census survey automation.
+
